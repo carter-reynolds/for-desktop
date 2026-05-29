@@ -17,12 +17,19 @@ import { updateTrayMenu } from "./tray";
 // global reference to main window
 export let mainWindow: BrowserWindow;
 
-// currently in-use build
-export const BUILD_URL = new URL(
-  app.commandLine.hasSwitch("force-server")
-    ? app.commandLine.getSwitchValue("force-server")
-    : /*MAIN_WINDOW_VITE_DEV_SERVER_URL ??*/ "https://stoat.chat/app",
-);
+// servers users are allowed to navigate within
+export const ALLOWED_ORIGINS = [
+  "https://stoat.carter-reynolds.net",
+  "https://stoat.chat",
+];
+
+// returns the active server URL (CLI flag takes precedence over stored config)
+export function getServerUrl(): URL {
+  if (app.commandLine.hasSwitch("force-server")) {
+    return new URL(app.commandLine.getSwitchValue("force-server"));
+  }
+  return new URL(config.serverUrl);
+}
 
 // internal window state
 let shouldQuit = false;
@@ -84,7 +91,7 @@ export function createMainWindow() {
   }
 
   // load the entrypoint
-  mainWindow.loadURL(BUILD_URL.toString());
+  mainWindow.loadURL(getServerUrl().toString());
 
   // minimise window to tray
   mainWindow.on("close", (event) => {
@@ -188,6 +195,7 @@ export function createMainWindow() {
   });
 
   // push world events to the window
+  ipcMain.on("switchServer", (_, url: string) => switchServer(url));
   ipcMain.on("minimise", () => mainWindow.minimize());
   ipcMain.on("maximise", () =>
     mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize(),
@@ -198,6 +206,14 @@ export function createMainWindow() {
 
   // let i = 0;
   // setInterval(() => setBadgeCount((++i % 30) + 1), 1000);
+}
+
+/**
+ * Switch to a different server URL and reload the window
+ */
+export function switchServer(url: string) {
+  config.serverUrl = url;
+  mainWindow.loadURL(url);
 }
 
 /**

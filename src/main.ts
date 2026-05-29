@@ -7,7 +7,7 @@ import { autoLaunch } from "./native/autoLaunch";
 import { config } from "./native/config";
 import { initDiscordRpc } from "./native/discordRpc";
 import { initTray } from "./native/tray";
-import { BUILD_URL, createMainWindow, mainWindow } from "./native/window";
+import { ALLOWED_ORIGINS, createMainWindow, mainWindow } from "./native/window";
 
 // Squirrel-specific logic
 // create/remove shortcuts on Windows when installing / uninstalling
@@ -36,7 +36,7 @@ const onNotifyUser = (_info: IUpdateInfo) => {
 
 if (acquiredLock) {
   // start auto update logic
-  updateElectronApp({ onNotifyUser });
+  updateElectronApp({ repo: "carter-reynolds/for-desktop", onNotifyUser });
 
   // create and configure the app when electron is ready
   app.on("ready", () => {
@@ -56,7 +56,7 @@ if (acquiredLock) {
 
     // Windows specific fix for notifications
     if (process.platform === "win32") {
-      app.setAppUserModelId("chat.stoat.notifications");
+      app.setAppUserModelId("net.carter-reynolds.stoat.notifications");
     }
   });
 
@@ -87,9 +87,9 @@ if (acquiredLock) {
 
   // ensure URLs launch in external context
   app.on("web-contents-created", (_, contents) => {
-    // prevent navigation out of build URL origin
+    // only allow navigation within known server origins
     contents.on("will-navigate", (event, navigationUrl) => {
-      if (new URL(navigationUrl).origin !== BUILD_URL.origin) {
+      if (!ALLOWED_ORIGINS.includes(new URL(navigationUrl).origin)) {
         event.preventDefault();
       }
     });
